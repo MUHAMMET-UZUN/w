@@ -4,13 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
 import { z } from "zod";
 
-const COOKIE_OPTIONS = {
+const getCookieOptions = () => ({
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure:
+    process.env.NODE_ENV === "production" &&
+    process.env.COOKIE_SECURE !== "false",
   sameSite: "lax" as const,
   maxAge: 60 * 60 * 24 * 7,
   path: "/",
-};
+});
 
 const schema = z.object({
   email: z.string().min(1, "E-posta gerekli").refine(
@@ -67,6 +69,6 @@ export async function POST(req: Request) {
   });
 
   const res = NextResponse.json({ success: true, user: { id: user.id, email: user.email, role: user.role } });
-  res.cookies.set("auth_token", token, COOKIE_OPTIONS);
+  res.cookies.set("auth_token", token, getCookieOptions());
   return res;
 }

@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function AdminLoginPage() {
+  const searchParams = useSearchParams();
+  const returnTo = useMemo(
+    () => searchParams.get("return") || "/admin/dashboard",
+    [searchParams]
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,7 +41,8 @@ export default function AdminLoginPage() {
     }
 
     // Full page navigation - cookie'nin sonraki istekte gönderilmesini garanti eder
-    window.location.href = "/admin/dashboard";
+    const safe = returnTo.startsWith("/admin") ? returnTo : "/admin/dashboard";
+    window.location.href = safe;
   }
 
   return (

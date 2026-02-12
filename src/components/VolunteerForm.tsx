@@ -1,44 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-type FormConfig = {
-  title: string;
-  fullNameLabel: string;
-  emailLabel: string;
-  phoneLabel: string;
-  reasonLabel: string;
-  fullNamePlaceholder: string;
-  emailPlaceholder: string;
-  phonePlaceholder: string;
-  reasonPlaceholder: string;
-  submitText: string;
-  successMessage: string;
-};
-
-const defaultConfig: FormConfig = {
-  title: "Gönüllü Başvuru Formu",
-  fullNameLabel: "Ad Soyad",
-  emailLabel: "E-posta",
-  phoneLabel: "Telefon",
-  reasonLabel: "Başvuru Gerekçesi / Mesajınız",
-  fullNamePlaceholder: "Ad Soyad",
-  emailPlaceholder: "ornek@email.com",
-  phonePlaceholder: "05XXXXXXXXX",
-  reasonPlaceholder:
-    "Neden gönüllü olmak istiyorsunuz? Hangi alanlarda destek olabilirsiniz?",
-  submitText: "Gönder",
-  successMessage: "Başvurunuz alındı. En kısa sürede değerlendirilecektir.",
-};
+import type { VolunteerFormConfig, VolunteerFormField } from "@/lib/volunteer-form";
 
 export default function VolunteerForm() {
-  const [config, setConfig] = useState<FormConfig>(defaultConfig);
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    reason: "",
-  });
+  const [config, setConfig] = useState<VolunteerFormConfig | null>(null);
+  const [formData, setFormData] = useState<Record<string, string | string[]>>(
+    {}
+  );
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,12 +15,20 @@ export default function VolunteerForm() {
   useEffect(() => {
     fetch("/api/settings/volunteer-form")
       .then((res) => res.json())
-      .then((data) => setConfig({ ...defaultConfig, ...data }))
-      .catch(() => {});
+      .then((data: VolunteerFormConfig) => {
+        setConfig(data);
+        const initial: Record<string, string | string[]> = {};
+        data.fields?.forEach((f) => {
+          initial[f.key] = f.type === "checkbox" ? [] : "";
+        });
+        setFormData(initial);
+      })
+      .catch(() => setConfig({ fields: [], title: "", submitText: "", successMessage: "" }));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!config) return;
     setError(null);
     setLoading(true);
 
@@ -73,7 +50,11 @@ export default function VolunteerForm() {
       }
 
       setSuccess(true);
-      setFormData({ fullName: "", email: "", phone: "", reason: "" });
+      const reset: Record<string, string | string[]> = {};
+      config.fields?.forEach((f) => {
+        reset[f.key] = f.type === "checkbox" ? [] : "";
+      });
+      setFormData(reset);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu.");
     } finally {
@@ -82,13 +63,125 @@ export default function VolunteerForm() {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    field: VolunteerFormField
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+    if (field.type === "checkbox") {
+      const opts = field.options ?? [];
+      const val = e.target.value;
+      setFormData((prev) => {
+        const arr = (prev[field.key] as string[]) ?? [];
+        const next = arr.includes(val)
+          ? arr.filter((x) => x !== val)
+          : [...arr, val];
+        return { ...prev, [field.key]: next };
+      });
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [field.key]: e.target.value,
+      }));
+    }
   };
+
+  const handleRadioChange = (fieldKey: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [fieldKey]: value }));
+  };
+
+  const inputClass =
+    "w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500";
+
+  const renderField = (field: VolunteerFormField) => {
+    const value = formData[field.key];
+
+    if (field.type === "textarea") {
+      return (
+        <textarea
+          name={field.key}
+          value={(value as string) ?? ""}
+          onChange={(e) => handleChange(e, field)}
+          placeholder={field.placeholder}
+          required={field.required}
+          minLength={field.minLength}
+          maxLength={field.maxLength}
+          rows={field.rows ?? 4}
+          className={inputClass}
+        />
+      );
+    }
+
+    if (field.type === "radio") {
+      const options = field.options ?? [];
+      return (
+        <div className="space-y-2">
+          {options.map((opt) => (
+            <label key={opt.value} className="flex items-center gap-2">
+              <input
+                type="radio"
+                name={field.key}
+                value={opt.value}
+                checked={(value as string) === opt.value}
+                onChange={() => handleRadioChange(field.key, opt.value)}
+                required={field.required}
+                className="w-4 h-4"
+              />
+              <span>{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      );
+    }
+
+    if (field.type === "checkbox") {
+      const options = field.options ?? [];
+      const selected = (value as string[]) ?? [];
+      return (
+        <div className="space-y-2">
+          {options.map((opt) => (
+            <label key={opt.value} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                value={opt.value}
+                checked={selected.includes(opt.value)}
+                onChange={(e) => handleChange(e, field)}
+                className="w-4 h-4 rounded"
+              />
+              <span>{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      );
+    }
+
+    const inputType: string =
+      field.type === "email"
+        ? "email"
+        : field.type === "tel"
+          ? "tel"
+          : "text";
+
+    return (
+      <input
+        type={inputType}
+        name={field.key}
+        value={(value as string) ?? ""}
+        onChange={(e) => handleChange(e, field)}
+        placeholder={field.placeholder}
+        required={field.required}
+        minLength={field.minLength}
+        maxLength={field.maxLength}
+        className={inputClass}
+      />
+    );
+  };
+
+  if (!config || !config.fields?.length) {
+    return (
+      <div className="max-w-lg mx-auto p-6 text-gray-500 text-center">
+        Form yapılandırılmıyor. Lütfen admin panelinden formu düzenleyin.
+      </div>
+    );
+  }
 
   return (
     <form
@@ -100,71 +193,18 @@ export default function VolunteerForm() {
           {config.title}
         </h3>
       )}
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          {config.fullNameLabel}
-        </label>
-        <input
-          type="text"
-          name="fullName"
-          value={formData.fullName}
-          onChange={handleChange}
-          placeholder={config.fullNamePlaceholder}
-          required
-          minLength={2}
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          {config.emailLabel}
-        </label>
-        <input
-          type="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          placeholder={config.emailPlaceholder}
-          required
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          {config.phoneLabel}
-        </label>
-        <input
-          type="tel"
-          name="phone"
-          value={formData.phone}
-          onChange={handleChange}
-          placeholder={config.phonePlaceholder}
-          required
-          minLength={10}
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          {config.reasonLabel}
-        </label>
-        <textarea
-          name="reason"
-          value={formData.reason}
-          onChange={handleChange}
-          placeholder={config.reasonPlaceholder}
-          required
-          minLength={10}
-          rows={4}
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
-      </div>
+      {config.fields.map((field) => (
+        <div key={field.id}>
+          <label className="block text-sm font-medium mb-1">
+            {field.label}
+            {field.required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+          {renderField(field)}
+        </div>
+      ))}
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
-
       {success && (
         <p className="text-green-600 text-sm">{config.successMessage}</p>
       )}

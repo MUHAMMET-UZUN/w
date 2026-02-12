@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { defaultVolunteerFormConfig } from "@/lib/volunteer-form";
+import type { VolunteerFormConfig } from "@/lib/volunteer-form";
 
 /** Public: Gönüllü form ayarlarını getir */
 export async function GET() {
@@ -7,25 +9,14 @@ export async function GET() {
     where: { id: "volunteer_form" },
   });
 
-  const defaultValue = {
-    title: "Gönüllü Başvuru Formu",
-    fullNameLabel: "Ad Soyad",
-    emailLabel: "E-posta",
-    phoneLabel: "Telefon",
-    reasonLabel: "Başvuru Gerekçesi / Mesajınız",
-    fullNamePlaceholder: "Ad Soyad",
-    emailPlaceholder: "ornek@email.com",
-    phonePlaceholder: "05XXXXXXXXX",
-    reasonPlaceholder:
-      "Neden gönüllü olmak istiyorsunuz? Hangi alanlarda destek olabilirsiniz?",
-    submitText: "Gönder",
-    successMessage:
-      "Başvurunuz alındı. En kısa sürede değerlendirilecektir.",
-  };
+  const value: VolunteerFormConfig = setting
+    ? (JSON.parse(setting.value) as VolunteerFormConfig)
+    : defaultVolunteerFormConfig;
 
-  const value = setting
-    ? (JSON.parse(setting.value) as typeof defaultValue)
-    : defaultValue;
+  // Eski format varsa varsayılana dön
+  if (!value.fields || !Array.isArray(value.fields)) {
+    return NextResponse.json(defaultVolunteerFormConfig);
+  }
 
   return NextResponse.json(value);
 }

@@ -25,9 +25,13 @@ export async function createSession(user: SessionUser): Promise<string> {
     .sign(SECRET);
 
   const store = await cookies();
+  // Docker/local HTTP: Secure cookie gönderilmez. COOKIE_SECURE=false ile dev ortamında düzeltilir.
+  const useSecure =
+    process.env.NODE_ENV === "production" &&
+    process.env.COOKIE_SECURE !== "false";
   store.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecure,
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",

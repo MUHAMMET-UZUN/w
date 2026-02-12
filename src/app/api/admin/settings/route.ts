@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/authz";
+import { defaultVolunteerFormConfig } from "@/lib/volunteer-form";
+
+export const dynamic = "force-dynamic";
 
 const SETTING_KEYS = [
   "contact_info",
@@ -37,21 +40,7 @@ export async function GET(req: Request) {
           instagram: "",
         }
       : key === "volunteer_form"
-        ? {
-            title: "Gönüllü Başvuru Formu",
-            fullNameLabel: "Ad Soyad",
-            emailLabel: "E-posta",
-            phoneLabel: "Telefon",
-            reasonLabel: "Başvuru Gerekçesi / Mesajınız",
-            fullNamePlaceholder: "Ad Soyad",
-            emailPlaceholder: "ornek@email.com",
-            phonePlaceholder: "05XXXXXXXXX",
-            reasonPlaceholder:
-              "Neden gönüllü olmak istiyorsunuz? Hangi alanlarda destek olabilirsiniz?",
-            submitText: "Gönder",
-            successMessage:
-              "Başvurunuz alındı. En kısa sürede değerlendirilecektir.",
-          }
+        ? defaultVolunteerFormConfig
         : {
             apiKey: "",
             secretKey: "",

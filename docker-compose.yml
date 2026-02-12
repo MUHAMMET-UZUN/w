@@ -53,6 +53,8 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/ihh_web
       DIRECT_URL: postgresql://postgres:postgres@db:5432/ihh_web
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-in-production}
+      # http://localhost ile erişimde cookie'nin gönderilmesi için (Secure=false)
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     depends_on:
       seed:
         condition: service_completed_successfully
