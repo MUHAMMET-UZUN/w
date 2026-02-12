@@ -20,10 +20,26 @@ export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
-  const parsed = donationCategorySchema.safeParse(await req.json());
-  if (!parsed.success) {
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
     return NextResponse.json(
-      { error: "VALIDATION_ERROR", details: parsed.error.flatten() },
+      { error: "INVALID_JSON", message: "Geçersiz istek formatı" },
+      { status: 400 }
+    );
+  }
+
+  const parsed = donationCategorySchema.safeParse(body);
+  if (!parsed.success) {
+    const flat = parsed.error.flatten();
+    const firstError = Object.values(flat.fieldErrors).flat()[0];
+    return NextResponse.json(
+      {
+        error: "VALIDATION_ERROR",
+        message: (firstError as string) ?? "Alanları kontrol edin",
+        details: flat,
+      },
       { status: 400 }
     );
   }
@@ -32,6 +48,7 @@ export async function POST(req: Request) {
     data: {
       name: parsed.data.name,
       description: parsed.data.description,
+      image: parsed.data.image ?? null,
       fixedPrice: parsed.data.fixedPrice ?? null,
       targetAmount: parsed.data.targetAmount ?? null,
       isActive: parsed.data.isActive,

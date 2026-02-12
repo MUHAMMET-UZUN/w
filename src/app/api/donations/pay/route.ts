@@ -11,7 +11,7 @@ import { donationPaySchema } from "@/lib/validations";
  * API anahtarları .env'de saklanır, asla frontend'e sızdırılmaz.
  */
 export async function POST(req: Request) {
-  if (!isIyzicoConfigured()) {
+  if (!(await isIyzicoConfigured())) {
     return NextResponse.json(
       { error: "PAYMENT_NOT_CONFIGURED", message: "Ödeme sistemi yapılandırılmamış" },
       { status: 503 }

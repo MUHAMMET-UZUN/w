@@ -10,6 +10,7 @@ export async function GET() {
       id: true,
       name: true,
       description: true,
+      image: true,
       fixedPrice: true,
       targetAmount: true,
       collected: true,

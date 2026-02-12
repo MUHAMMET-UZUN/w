@@ -29,6 +29,7 @@ export async function PUT(req: Request, ctx: Ctx) {
     data: {
       name: parsed.data.name,
       description: parsed.data.description,
+      image: parsed.data.image ?? null,
       fixedPrice: parsed.data.fixedPrice ?? null,
       targetAmount: parsed.data.targetAmount ?? null,
       isActive: parsed.data.isActive,

@@ -12,11 +12,21 @@ export const postUpdateSchema = postCreateSchema.partial();
 
 export const donationCategorySchema = z.object({
   name: z.string().min(1, "İsim zorunludur").max(100),
-  description: z.string().min(1),
-  fixedPrice: z.number().positive().optional().nullable(),
-  targetAmount: z.number().positive().optional().nullable(),
+  description: z.string().min(1, "Açıklama zorunludur"),
+  image: z
+    .union([z.string(), z.null(), z.undefined()])
+    .optional()
+    .transform((v) => (!v || (typeof v === "string" && v.trim() === "") ? null : v)),
+  fixedPrice: z
+    .union([z.coerce.number().nonnegative(), z.null()])
+    .optional()
+    .nullable(),
+  targetAmount: z
+    .union([z.coerce.number().nonnegative(), z.null()])
+    .optional()
+    .nullable(),
   isActive: z.boolean().optional().default(true),
-  order: z.number().int().min(0).optional().default(0),
+  order: z.coerce.number().int().min(0).optional().default(0),
 });
 
 export const bankAccountSchema = z.object({

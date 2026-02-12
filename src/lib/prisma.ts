@@ -10,7 +10,6 @@ function createPrismaClient() {
   const databaseUrl =
     process.env.DATABASE_URL ?? "postgresql://localhost:5432/placeholder";
 
-  // Supabase pooler (6543) + pgbouncer için doğru kullanım
   const pool = new Pool({
     connectionString: databaseUrl,
   });

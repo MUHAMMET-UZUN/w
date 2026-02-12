@@ -1,10 +1,35 @@
 /**
- * iyzico ödeme entegrasyonu - API anahtarları .env'de saklanır, asla frontend'e sızdırılmaz.
- * Sadece backend (API route) üzerinden çağrılır.
- * Dynamic import: iyzipay paketi build sırasında yüklenmez, sadece ödeme isteği geldiğinde.
+ * iyzico ödeme entegrasyonu - API anahtarları .env veya veritabanında saklanır.
+ * Admin panelden iyzico ayarları düzenlenebilir. Öncelik: DB > env
  */
 
-// Build zamanında yüklenmez - sadece createDonationPayment çağrıldığında
+export type IyzicoConfig = {
+  apiKey: string;
+  secretKey: string;
+  baseUri: string;
+};
+
+async function getIyzicoConfig(): Promise<IyzicoConfig | null> {
+  const fromEnv = {
+    apiKey: process.env.IYZIPAY_API_KEY ?? "",
+    secretKey: process.env.IYZIPAY_SECRET_KEY ?? "",
+    baseUri: process.env.IYZIPAY_URI ?? "https://sandbox-api.iyzipay.com",
+  };
+  if (fromEnv.apiKey && fromEnv.secretKey) return fromEnv;
+
+  try {
+    const { prisma } = await import("./prisma");
+    const setting = await prisma.setting.findUnique({
+      where: { id: "iyzico" },
+    });
+    if (!setting) return null;
+    const db = JSON.parse(setting.value) as IyzicoConfig;
+    if (db.apiKey && db.secretKey) return db;
+  } catch {
+    // ignore
+  }
+  return null;
+}
 
 export type IyzicoPaymentResult =
   | { success: true; paymentId: string; conversationId: string }
@@ -39,17 +64,16 @@ export async function createDonationPayment(
     zipCode: string;
   }
 ): Promise<IyzicoPaymentResult> {
+  const config = await getIyzicoConfig();
+  if (!config) {
+    throw new Error("iyzico API ayarları tanımlı değil. Admin panelden yapılandırın.");
+  }
   // @ts-expect-error iyzipay has no types
   const Iyzipay = (await import("iyzipay")).default;
-  const apiKey = process.env.IYZIPAY_API_KEY ?? "";
-  const secretKey = process.env.IYZIPAY_SECRET_KEY ?? "";
-  if (!apiKey || !secretKey) {
-    throw new Error("IYZIPAY_API_KEY ve IYZIPAY_SECRET_KEY tanımlı olmalı");
-  }
   const iyzipay = new Iyzipay({
-    apiKey,
-    secretKey,
-    uri: process.env.IYZIPAY_URI ?? "https://sandbox-api.iyzipay.com",
+    apiKey: config.apiKey,
+    secretKey: config.secretKey,
+    uri: config.baseUri,
   });
 
   const conversationId = `don-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -133,6 +157,12 @@ export async function createDonationPayment(
   });
 }
 
-export function isIyzicoConfigured(): boolean {
-  return !!(process.env.IYZIPAY_API_KEY && process.env.IYZIPAY_SECRET_KEY);
+export async function isIyzicoConfigured(): Promise<boolean> {
+  if (process.env.IYZIPAY_API_KEY && process.env.IYZIPAY_SECRET_KEY) return true;
+  try {
+    const config = await getIyzicoConfig();
+    return !!(config?.apiKey && config?.secretKey);
+  } catch {
+    return false;
+  }
 }

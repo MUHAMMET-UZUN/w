@@ -1,13 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,21 +13,29 @@ export default function AdminLoginPage() {
     setErr(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
     });
 
+    const data = await res.json();
     setLoading(false);
 
-    if (error) {
-      setErr(error.message);
+    if (!res.ok) {
+      setErr(data.message ?? data.error ?? "Giriş yapılamadı");
       return;
     }
 
-    // cookie/session otursun + sayfalar güncellensin
-    router.push("/admin");
-    router.refresh();
+    // Admin yetkisi kontrolü - MEMBER ise panele giremez
+    if (data.user?.role === "MEMBER") {
+      setErr("Admin paneline erişim yetkiniz yok.");
+      return;
+    }
+
+    // Full page navigation - cookie'nin sonraki istekte gönderilmesini garanti eder
+    window.location.href = "/admin/dashboard";
   }
 
   return (
@@ -46,6 +49,7 @@ export default function AdminLoginPage() {
         <input
           className="w-full border rounded px-3 py-2"
           placeholder="E-posta"
+          type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
@@ -61,6 +65,7 @@ export default function AdminLoginPage() {
         />
 
         <button
+          type="submit"
           disabled={loading}
           className="w-full bg-green-600 hover:bg-green-700 text-white rounded px-3 py-2 disabled:opacity-60"
         >
