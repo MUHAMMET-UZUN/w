@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+////////////////////////////////////////////////////
+// ENUMS
+////////////////////////////////////////////////////
+
+enum UserRole {
+  EDITOR
+  ADMIN
+  SUPERADMIN
+}
+
+////////////////////////////////////////////////////
+// MODELLER
+////////////////////////////////////////////////////
+
+model Unit {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slides    Slide[]
+  users     UserProfile[]
+}
+
+model Slide {
+  id         String   @id @default(cuid())
+  title      String
+  desc       String
+  imageUrl   String
+  thumbUrl   String?
+  ctaText    String
+  ctaHref    String
+  order      Int      @default(0)
+  isActive   Boolean  @default(true)
+
+  // ✅ ARŞİV
+  isArchived Boolean  @default(false)
+  archivedAt DateTime?
+
+  // ✅ birime bağlı olmalı (yetki için şart)
+  unitId     String
+  unit       Unit     @relation(fields: [unitId], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([unitId])
+  @@index([isActive, isArchived, order])
+}
+
+model UserProfile {
+  // supabase auth user id (uuid string)
+  id        String   @id
+  email     String?  @unique
+  role      UserRole @default(EDITOR)
+
+  unitId    String
+  unit      Unit     @relation(fields: [unitId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([unitId])
+  @@index([role])
+}
