@@ -149,7 +149,3 @@ Uygulama iki temel bölümden oluşur:
 2. **Backend:** Render, DigitalOcean App Platform veya Heroku üzerinde Node.js servisi olarak yayınlanacak.
 3. **Frontend:** Vercel veya Netlify üzerinde static site olarak host edilecek.
 4. **SSL/Güvenlik:** iyzico entegrasyonu için HTTPS zorunludur.
-
----
-
-**Sıradaki Adım:** İstersen bu mimariye uygun olarak `iyzico` ödeme entegrasyonu için gerekli olan örnek `Controller` kodlarını veya `Prisma` kurulum komutlarını hazırlayabilirim. Başlayalım mı?

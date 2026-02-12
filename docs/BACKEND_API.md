@@ -2,6 +2,21 @@
 
 Bu doküman, İHH platformu backend API uç noktalarını ve yapılandırmayı açıklar.
 
+## Docker ile Çalıştırma
+
+Proje Docker ile çalıştırılabilir; PostgreSQL otomatik ayağa kalkar ve migration uygulanır.
+
+```bash
+# Build + başlat
+docker compose up --build
+
+# Arka planda
+docker compose up -d --build
+```
+
+- **Uygulama:** http://localhost:3000
+- **PostgreSQL:** localhost:5432 (user: postgres, pass: postgres, db: ihh_web)
+
 ## Ortam Değişkenleri
 
 `.env.local` dosyasına eklenmesi gereken değişkenler:
